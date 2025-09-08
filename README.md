@@ -4,20 +4,20 @@
 
 ### **1.1 - Clonage du repository**
 ```bash
-# Naviguer dans le dossier de travail
-cd /Users/jeremy/Desktop/beaupeyrat/github
+# Naviguer dans votre dossier de travail souhaité
+cd /chemin/vers/votre/dossier
 
-# Cloner le template Symfony Docker de Dunglas
-git clone https://github.com/dunglas/symfony-docker.git
-
-# Entrer dans le projet
-cd symfony-docker
+# Cloner le template Symfony Docker de Dunglas directement dans le dossier courant
+git clone https://github.com/dunglas/symfony-docker.git .
 ```
 
 ### **1.2 - Construction et démarrage initial**
 ```bash
-# Construire les images Docker
+# Construire les images Docker (premier build)
 docker compose build --pull --no-cache
+
+# Alternative pour builds suivants (plus rapide)
+# docker compose build
 
 # Démarrer les conteneurs
 docker compose up --wait
@@ -26,11 +26,20 @@ docker compose up --wait
 docker compose ps
 ```
 
+**📝 Note sur les options de build :**
+- `--pull` : Force le téléchargement des dernières images (recommandé pour la sécurité)
+- `--no-cache` : Reconstruit tout depuis zéro (indispensable au premier build)
+- Ces options peuvent être omises pour les builds suivants (plus rapide)
+
 ### **1.3 - Accès à l'application**
 - URL : `https://localhost`
 - ⚠️ Accepter le certificat SSL auto-signé dans le navigateur
 
 ### **1.4 - Installation de la base de données**
+
+#### **Méthodes d'accès aux conteneurs**
+
+#### **Option A : Terminal (ligne de commande)**
 ```bash
 # Entrer dans le conteneur PHP
 docker compose exec php bash
@@ -40,7 +49,23 @@ composer require symfony/orm-pack
 
 # Sortir du conteneur
 exit
+```
 
+#### **Option B : Extension VS Code Docker**
+1. Installer l'extension "Docker" par Microsoft
+2. Dans la sidebar Docker (icône baleine) :
+   - Clic droit sur `symfony-docker-php-1`
+   - Sélectionner "Attach Shell"
+3. Un terminal s'ouvre directement dans VS Code
+4. Exécuter : `composer require symfony/orm-pack`
+
+#### **Option C : Palette de commandes VS Code**
+- `Ctrl/Cmd + Shift + P`
+- Taper "Docker: Attach Shell"
+- Sélectionner `symfony-docker-php-1` dans la liste
+
+#### **Finalisation**
+```bash
 # Reconstruire après modification des fichiers Docker
 docker compose down
 docker compose build --pull --no-cache
@@ -319,11 +344,30 @@ docker compose logs php
 # Redémarrer complètement
 docker compose down -v
 docker compose up --wait
-
-# Entrer dans un conteneur
-docker compose exec php bash
-docker compose exec database bash
 ```
+
+### **Méthodes d'accès aux conteneurs**
+
+#### **Option A : Terminal (ligne de commande)**
+```bash
+# Accès au conteneur PHP
+docker compose exec php bash
+
+# Accès direct à PostgreSQL
+docker compose exec database psql -U symfony_user -d app
+```
+
+#### **Option B : Extension VS Code Docker**
+1. Installer l'extension "Docker" par Microsoft
+2. Dans la sidebar Docker (icône baleine) :
+   - Clic droit sur le conteneur souhaité
+   - Sélectionner "Attach Shell"
+3. Un terminal s'ouvre directement dans VS Code
+
+#### **Option C : Palette de commandes VS Code**
+- `Ctrl/Cmd + Shift + P`
+- Taper "Docker: Attach Shell"
+- Sélectionner le conteneur dans la liste
 
 ### **Connexions à la base**
 ```bash
