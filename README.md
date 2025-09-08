@@ -1,6 +1,24 @@
 # 📚 Documentation complète : Installation et sécurisation Docker Symfony
 
-## 🚀 **1. Installation Docker Symfony (Dunglas)**
+## � **Prérequis**
+
+Avant de commencer, assurez-vous d'avoir installé :
+- **Docker Desktop** (version 20.10+)
+- **Docker Compose** (version 2.10+)
+- **Git**
+- **Un éditeur de code** (VS Code recommandé avec l'extension Docker)
+
+### **Vérification des prérequis**
+```bash
+# Vérifier Docker
+docker --version
+docker compose version
+
+# Vérifier Git
+git --version
+```
+
+## �🚀 **1. Installation Docker Symfony (Dunglas)**
 
 ### **1.1 - Clonage du repository**
 ```bash
@@ -196,11 +214,25 @@ SYMFONY_DB_PASSWORD=symfony_secure_pwd_123
 # DATABASE_URL pour l'utilisateur sécurisé
 DATABASE_URL="postgresql://symfony_user:symfony_secure_pwd_123@database:5432/app?serverVersion=16&charset=utf8"
 EOF
+
+# Créer .env.dev.local (non versionné) avec les secrets Symfony
+cat > .env.dev.local << 'EOF'
+###> symfony/framework-bundle ###
+APP_SECRET=$(openssl rand -hex 32)
+###< symfony/framework-bundle ###
+EOF
 ```
 
 Modifier le `.env` principal pour avoir des valeurs d'exemple :
 ```env
 DATABASE_URL="postgresql://symfony_user:CHANGE_ME_PASSWORD@database:5432/app?serverVersion=16&charset=utf8"
+```
+
+Modifier le `.env.dev` pour avoir une structure d'exemple :
+```env
+###> symfony/framework-bundle ###
+APP_SECRET=
+###< symfony/framework-bundle ###
 ```
 
 ### **3.5 - Application des modifications**
@@ -328,6 +360,20 @@ php bin/console doctrine:query:sql "DROP TABLE test_table;"
 - ❌ DROP DATABASE bloqué (sécurité OK)
 - ❌ Actions dangereuses bloquées
 
+### **Structure finale du projet :**
+```
+📁 Votre projet
+├── .env                           ← Exemples (versionné)
+├── .env.local                     ← Secrets BDD (NON versionné)
+├── .env.dev                       ← Structure Symfony (versionné)
+├── .env.dev.local                 ← Secrets Symfony (NON versionné)
+├── .gitignore                     ← Protège les secrets
+├── compose.yaml                   ← Configuration Docker (modifié)
+├── docker/postgres/init/          ← Scripts d'initialisation
+│   └── 01-create-symfony-user.sql
+└── INSTALL_SECURE_GUIDE.md        ← Cette documentation
+```
+
 ---
 
 ## 🔧 **Commandes utiles**
@@ -379,3 +425,43 @@ docker compose exec database psql -U app -d app
 ```
 
 **🎯 Votre installation Docker Symfony est maintenant complète et sécurisée !**
+
+---
+
+## 🚨 **Dépannage**
+
+### **Problème : "Database connection failed"**
+```bash
+# Vérifier que les conteneurs sont démarrés
+docker compose ps
+
+# Vérifier les logs
+docker compose logs database
+
+# Vérifier votre .env.local
+cat .env.local
+```
+
+### **Problème : "Permission denied for user symfony_user"**
+```bash
+# Recréer complètement la base avec le script d'initialisation
+docker compose down -v
+docker compose up --wait
+```
+
+### **Problème : "Port already in use"**
+```bash
+# Arrêter les autres services sur les ports 80/443
+sudo lsof -i :80
+sudo lsof -i :443
+
+# Ou modifier les ports dans compose.yaml
+```
+
+### **Problème : Les modifications du script SQL ne s'appliquent pas**
+```bash
+# Supprimer les volumes pour forcer la réinitialisation
+docker compose down -v
+docker volume prune
+docker compose up --wait
+```
