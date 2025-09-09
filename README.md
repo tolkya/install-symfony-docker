@@ -376,7 +376,738 @@ php bin/console doctrine:query:sql "DROP TABLE test_table;"
 
 ---
 
-## 🔧 **Commandes utiles**
+## � **6. Installation des bundles Symfony essentiels**
+
+### **6.1 - Installation du Maker Bundle (outils de développement)**
+
+#### **Méthodes d'accès aux conteneurs (rappel)**
+
+#### **Option A : Terminal (ligne de commande)**
+```bash
+# Entrer dans le conteneur PHP
+docker compose exec php bash
+
+# Installer le maker bundle (outils de développement)
+composer require --dev symfony/maker-bundle
+
+# Vérifier l'installation
+php bin/console list make
+```
+
+#### **Option B : Extension VS Code Docker**
+1. Clic droit sur `symfony-docker-php-1` → "Attach Shell"
+2. Exécuter : `composer require --dev symfony/maker-bundle`
+
+**🛠️ Ce que le Maker Bundle apporte :**
+- `make:controller` - Créer des contrôleurs
+- `make:entity` - Créer des entités Doctrine
+- `make:form` - Créer des formulaires
+- `make:crud` - Générer un CRUD complet
+- `make:migration` - Créer des migrations de base de données
+- `make:user` - Créer un système d'utilisateurs
+- `make:auth` - Créer un système d'authentification
+- Et bien d'autres commandes de génération !
+
+### **6.2 - Installation du WebApp Pack (stack complète)**
+```bash
+# Toujours dans le conteneur PHP
+composer require symfony/webapp-pack
+
+# Sortir du conteneur
+exit
+```
+
+**🚀 Ce que le WebApp Pack apporte :**
+- **Twig** - Moteur de templates pour les vues
+- **Doctrine Migrations** - Gestion des migrations de BDD
+- **Security Bundle** - Authentification et autorisation
+- **Form Component** - Création de formulaires
+- **Validator** - Validation des données
+- **Asset Component** - Gestion des assets (CSS, JS)
+- **Mailer** - Envoi d'emails
+- **Messenger** - Système de queues et messages asynchrones
+- **WebProfiler** - Outils de debug et profiling
+- **Et beaucoup d'autres composants essentiels !**
+
+### **6.3 - Reconstruction après installation**
+```bash
+# Ces installations peuvent modifier les fichiers Docker et ajouter de nouveaux services
+docker compose down
+docker compose build --pull --no-cache
+docker compose up --wait
+```
+
+### **6.4 - Test des nouvelles fonctionnalités**
+```bash
+# Entrer dans le conteneur PHP
+docker compose exec php bash
+
+# Voir toutes les commandes Symfony disponibles
+php bin/console list
+
+# Voir spécifiquement les commandes make
+php bin/console list make
+
+# Exemple : Créer votre première entité
+php bin/console make:entity Product
+# Suivre les instructions interactives
+
+# Créer une migration après avoir créé des entités
+php bin/console make:migration
+
+# Appliquer les migrations à la base de données
+php bin/console doctrine:migrations:migrate --no-interaction
+
+# Générer un contrôleur
+php bin/console make:controller ProductController
+
+# Générer un CRUD complet pour une entité
+php bin/console make:crud Product
+
+exit
+```
+
+### **6.5 - Structure enrichie du projet**
+Après installation, votre projet contient maintenant :
+```
+📁 Votre projet Symfony
+├── .env                           ← Config avec nouvelles sections (messenger, mailer, etc.)
+├── .env.local                     ← Vos secrets
+├── .gitignore                     ← Mis à jour automatiquement
+├── assets/                        ← Fichiers CSS/JS (asset-mapper)
+├── config/
+│   └── packages/                  ← Configurations des nouveaux bundles
+├── migrations/                    ← Migrations Doctrine
+├── src/
+│   ├── Controller/                ← Vos contrôleurs
+│   ├── Entity/                    ← Vos entités Doctrine
+│   ├── Form/                      ← Vos formulaires
+│   └── Repository/                ← Vos repositories
+├── templates/                     ← Templates Twig
+├── tests/                         ← Tests unitaires et fonctionnels
+└── var/
+    └── log/                       ← Logs de l'application
+```
+
+### **6.6 - Commandes utiles pour le développement**
+```bash
+# Créer une entité avec relations
+php bin/console make:entity User
+php bin/console make:entity Article
+
+# Générer les getters/setters manquants
+php bin/console make:entity --regenerate
+
+# Créer un formulaire pour une entité
+php bin/console make:form ArticleType Article
+
+# Créer un contrôleur avec template
+php bin/console make:controller HomeController
+
+# Générer un système d'authentification complet
+php bin/console make:user
+php bin/console make:auth
+
+# Voir l'état des migrations
+php bin/console doctrine:migrations:status
+
+# Créer des fixtures (données de test)
+composer require --dev doctrine/doctrine-fixtures-bundle
+php bin/console make:fixtures ArticleFixtures
+```
+
+---
+
+## 🎨 **7. Création et personnalisation des contrôleurs**
+
+### **7.1 - Créer un contrôleur d'accueil**
+```bash
+# Dans le conteneur PHP
+php bin/console make:controller HomeController
+```
+
+### **7.2 - Configurer la page d'accueil**
+
+#### **Modifier la route du contrôleur**
+Éditer le fichier `src/Controller/HomeController.php` :
+```php
+<?php
+
+namespace App\Controller;
+
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+
+class HomeController extends AbstractController
+{
+    #[Route('/', name: 'app_home')]  // <- Changer de '/home' vers '/'
+    public function index(): Response
+    {
+        return $this->render('home/index.html.twig', [
+            'controller_name' => 'HomeController',
+        ]);
+    }
+}
+```
+
+### **7.3 - Passer des variables à la vue**
+
+#### **Dans le contrôleur - Préparer les données**
+```php
+#[Route('/', name: 'app_home')]
+public function index(): Response
+{
+    // Créer vos variables
+    $message = "Bienvenue sur votre application Symfony !";
+    $nom = "Développeur";
+    $date = new \DateTime();
+    $technologies = ['Docker', 'Symfony', 'PostgreSQL', 'Twig'];
+    
+    return $this->render('home/index.html.twig', [
+        'controller_name' => 'HomeController',
+        'message' => $message,
+        'nom' => $nom,
+        'date' => $date,
+        'technologies' => $technologies,
+    ]);
+}
+```
+
+#### **Dans la vue Twig - Afficher les données**
+Éditer le fichier `templates/home/index.html.twig` :
+```twig
+{% extends 'base.html.twig' %}
+
+{% block title %}Accueil - {{ parent() }}{% endblock %}
+
+{% block body %}
+<div class="example-wrapper">
+    <h1>{{ message }}</h1>
+    
+    <div class="welcome-info">
+        <h2>Bonjour {{ nom }} !</h2>
+        <p>Date : {{ date|date('d/m/Y H:i') }}</p>
+        
+        <h3>Technologies utilisées :</h3>
+        <ul>
+        {% for techno in technologies %}
+            <li>{{ techno }}</li>
+        {% endfor %}
+        </ul>
+    </div>
+    
+    <div class="status">
+        <h3>État de l'installation :</h3>
+        <ul>
+            <li>✅ Docker : Opérationnel</li>
+            <li>✅ Symfony : Installé</li>
+            <li>✅ PostgreSQL : Connecté</li>
+            <li>✅ Sécurité : Configurée</li>
+        </ul>
+    </div>
+</div>
+
+<style>
+    .example-wrapper {
+        margin: 1em auto;
+        max-width: 800px;
+        width: 95%;
+        font: 18px/1.5 sans-serif;
+    }
+    
+    .welcome-info, .status {
+        background: #f9f9f9;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 8px;
+        border-left: 4px solid #007bff;
+    }
+    
+    h1 { color: #333; }
+    h2, h3 { color: #007bff; }
+    ul { margin: 10px 0; }
+    li { margin: 5px 0; }
+</style>
+{% endblock %}
+```
+
+### **7.4 - Syntaxes Twig essentielles**
+
+#### **Afficher des variables**
+```twig
+{{ ma_variable }}                    <!-- Afficher une variable -->
+{{ ma_variable|upper }}              <!-- En majuscules -->
+{{ ma_date|date('d/m/Y') }}         <!-- Formater une date -->
+{{ ma_chaine|length }}              <!-- Longueur d'une chaîne -->
+```
+
+#### **Conditions**
+```twig
+{% if age >= 18 %}
+    <p>Vous êtes majeur</p>
+{% elseif age >= 16 %}
+    <p>Vous êtes presque majeur</p>
+{% else %}
+    <p>Vous êtes mineur</p>
+{% endif %}
+```
+
+#### **Boucles**
+```twig
+{% for item in items %}
+    <p>{{ loop.index }}: {{ item }}</p>
+{% else %}
+    <p>Aucun élément à afficher</p>
+{% endfor %}
+```
+
+### **7.5 - Créer d'autres contrôleurs**
+
+#### **Contrôleur "À propos"**
+```bash
+php bin/console make:controller AboutController
+```
+
+#### **Exemple de contrôleur avec paramètres**
+```php
+// src/Controller/AboutController.php
+#[Route('/about', name: 'app_about')]
+public function about(): Response
+{
+    $infos = [
+        'version' => '1.0.0',
+        'auteur' => 'Votre nom',
+        'description' => 'Application Symfony avec Docker',
+    ];
+    
+    return $this->render('about/index.html.twig', [
+        'infos' => $infos,
+    ]);
+}
+
+#[Route('/user/{id}', name: 'app_user_profile')]
+public function userProfile(int $id): Response
+{
+    return $this->render('user/profile.html.twig', [
+        'user_id' => $id,
+    ]);
+}
+```
+
+### **7.6 - Navigation entre les pages**
+
+#### **Créer un menu dans base.html.twig**
+```twig
+<!-- templates/base.html.twig -->
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>{% block title %}Mon App Symfony{% endblock %}</title>
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text></svg>">
+    </head>
+    <body>
+        <nav style="background: #333; padding: 1rem;">
+            <a href="{{ path('app_home') }}" style="color: white; margin-right: 1rem;">Accueil</a>
+            <a href="{{ path('app_about') }}" style="color: white; margin-right: 1rem;">À propos</a>
+        </nav>
+        
+        {% block body %}{% endblock %}
+    </body>
+</html>
+```
+
+### **7.7 - Commandes utiles pour les contrôleurs**
+```bash
+# Lister toutes les routes
+php bin/console debug:router
+
+# Voir les détails d'une route spécifique
+php bin/console debug:router app_home
+
+# Supprimer un contrôleur (manuel)
+rm src/Controller/NomController.php
+rm templates/nom/index.html.twig
+rmdir templates/nom  # si le dossier est vide
+
+# Vider le cache
+php bin/console cache:clear
+```
+
+### **7.8 - Structure après création des contrôleurs**
+```
+📁 Votre projet
+├── src/
+│   └── Controller/
+│       ├── HomeController.php         ← Page d'accueil (/)
+│       ├── AboutController.php        ← Page à propos (/about)
+│       └── ProductController.php      ← Autres contrôleurs
+├── templates/
+│   ├── base.html.twig                ← Template principal avec navigation
+│   ├── home/
+│   │   └── index.html.twig           ← Vue de la page d'accueil
+│   ├── about/
+│   │   └── index.html.twig           ← Vue de la page à propos
+│   └── product/
+│       └── index.html.twig           ← Autres vues
+```
+
+### **7.9 - Test de votre application**
+```bash
+# Vérifier que tout fonctionne
+# Aller sur https://localhost
+# - Page d'accueil avec vos variables
+# - Navigation vers les autres pages
+# - Affichage correct des données
+
+# Consulter les logs en cas de problème
+docker compose logs php
+```
+
+
+---
+
+## 🎨 **8. Gestion des feuilles de style CSS**
+
+### **8.1 - Comprendre les deux approches**
+
+Symfony offre deux méthodes principales pour gérer les fichiers CSS :
+
+#### **Approche A : AssetMapper (Moderne - Recommandée)**
+- Fichiers dans `assets/styles/`
+- Optimisation automatique (minification, cache)
+- Gestion moderne des assets
+
+#### **Approche B : Dossier Public (Classique)**
+- Fichiers dans `public/assets/css/`
+- Accès direct via URL
+- Contrôle manuel des assets
+
+### **8.2 - Approche B : Utilisation du dossier public**
+
+#### **Étape 1 : Créer la structure de dossiers**
+```bash
+# Créer le dossier pour les CSS dans public
+mkdir -p public/assets/css
+```
+
+#### **Étape 2 : Créer votre fichier CSS**
+```bash
+# Créer le fichier CSS spécifique au contrôleur
+touch public/assets/css/HomeControlleur.css
+```
+
+#### **Étape 3 : Ajouter vos styles**
+Éditer `public/assets/css/HomeControlleur.css` :
+```css
+/* Styles spécifiques au HomeController */
+body {
+    background-color: #f8f9fa;
+    color: rgb(255, 105, 105);
+    font-family: Arial, sans-serif;
+}
+
+.example-wrapper {
+    margin: 1em auto;
+    max-width: 800px;
+    width: 95%;
+    font: 18px/1.5 sans-serif;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.example-wrapper code {
+    background: #06f44dff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: white;
+}
+
+h1 {
+    color: #333;
+    text-align: center;
+    border-bottom: 2px solid rgb(255, 105, 105);
+    padding-bottom: 10px;
+}
+
+h2 {
+    color: rgb(255, 105, 105);
+    font-style: italic;
+}
+
+ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+li {
+    background: #e9ecef;
+    margin: 10px 0;
+    padding: 10px;
+    border-left: 4px solid rgb(255, 105, 105);
+}
+```
+
+#### **Étape 4 : Inclure le CSS dans le template de base**
+Modifier `templates/base.html.twig` :
+```twig
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>{% block title %}Welcome!{% endblock %}</title>
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
+        
+        <!-- CSS via dossier public -->
+        <link rel="stylesheet" href="{{ asset('assets/css/HomeControlleur.css') }}">
+        
+        {% block stylesheets %}
+            <!-- CSS spécifiques aux pages individuelles -->
+        {% endblock %}
+
+        {% block javascripts %}
+            {% block importmap %}{{ importmap('app') }}{% endblock %}
+        {% endblock %}
+    </head>
+    <body>
+        {% block body %}{% endblock %}
+    </body>
+</html>
+```
+
+#### **Étape 5 : Nettoyer le template de la page**
+Modifier `templates/home/index.html.twig` pour supprimer le CSS inline :
+```twig
+{% extends 'base.html.twig' %}
+
+{% block title %}Hello HomeController!{% endblock %}
+
+{% block body %}
+<div class="example-wrapper">
+    <h1>Hello {{ controller_name }}! ✅</h1>
+    <h2>{{ ma_variable }}</h2>
+
+    <p>This friendly message is coming from:</p>
+    <ul>
+        <li>Your controller at <code>/app/src/Controller/HomeController.php</code></li>
+        <li>Your template at <code>/app/templates/home/index.html.twig</code></li>
+        <li>Your CSS at <code>/app/public/assets/css/HomeControlleur.css</code></li>
+    </ul>
+</div>
+{% endblock %}
+```
+
+### **8.3 - Comprendre la fonction asset()**
+
+#### **Importance de la fonction asset() :**
+```twig
+<!-- ❌ Incorrect - Chemin en dur -->
+<link rel="stylesheet" href="/assets/css/HomeControlleur.css">
+
+<!-- ✅ Correct - Utilisation d'asset() -->
+<link rel="stylesheet" href="{{ asset('assets/css/HomeControlleur.css') }}">
+```
+
+#### **Avantages d'asset() :**
+- **URLs absolues** → Fonctionne même si l'app n'est pas à la racine
+- **Cache busting** → Évite les problèmes de cache navigateur
+- **Environnements** → S'adapte au développement/production
+- **CDN Support** → Peut pointer vers un CDN en production
+
+### **8.4 - Approche A : AssetMapper (Alternative moderne)**
+
+#### **Structure AssetMapper :**
+```bash
+# Créer dans assets/styles/
+touch assets/styles/HomeControlleur.css
+```
+
+#### **Inclusion avec AssetMapper :**
+```twig
+<!-- Dans base.html.twig -->
+<link rel="stylesheet" href="{{ asset('styles/HomeControlleur.css') }}">
+```
+
+#### **Différences importantes :**
+```bash
+# Dossier public
+{{ asset('assets/css/HomeControlleur.css') }}  # Chemin complet
+
+# AssetMapper  
+{{ asset('styles/HomeControlleur.css') }}      # assets/ automatiquement ajouté
+```
+
+### **8.5 - CSS spécifiques aux pages**
+
+#### **CSS global (base.html.twig) :**
+```twig
+<!-- CSS pour toute l'application -->
+<link rel="stylesheet" href="{{ asset('assets/css/global.css') }}">
+```
+
+#### **CSS spécifique à une page :**
+```twig
+<!-- Dans templates/home/index.html.twig -->
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('assets/css/home-specific.css') }}">
+{% endblock %}
+```
+
+#### **CSS inline pour des cas spéciaux :**
+```twig
+{% block stylesheets %}
+    <style>
+        .page-specific-class {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+        }
+    </style>
+{% endblock %}
+```
+
+### **8.6 - Organisation recommandée des CSS**
+
+#### **Structure pour projets moyens/grands :**
+```
+📁 public/assets/css/
+├── global.css              ← Styles généraux (body, navigation)
+├── components.css          ← Composants réutilisables (boutons, cartes)
+├── HomeControlleur.css     ← Spécifique à la page d'accueil
+├── ProductController.css   ← Spécifique aux produits
+└── themes/
+    ├── dark.css           ← Thème sombre
+    └── light.css          ← Thème clair
+```
+
+#### **Inclusion multiple :**
+```twig
+<!-- base.html.twig -->
+<link rel="stylesheet" href="{{ asset('assets/css/global.css') }}">
+<link rel="stylesheet" href="{{ asset('assets/css/components.css') }}">
+
+{% block stylesheets %}
+    <!-- CSS spécifiques aux pages -->
+{% endblock %}
+```
+
+### **8.7 - Bonnes pratiques CSS**
+
+#### **Nommage des classes (BEM) :**
+```css
+/* Block Element Modifier */
+.home-wrapper { }              /* Block */
+.home-wrapper__title { }       /* Element */
+.home-wrapper__title--large { } /* Modifier */
+```
+
+#### **Variables CSS :**
+```css
+:root {
+    --primary-color: rgb(255, 105, 105);
+    --secondary-color: #007bff;
+    --font-family: Arial, sans-serif;
+}
+
+body {
+    color: var(--primary-color);
+    font-family: var(--font-family);
+}
+```
+
+#### **Responsive Design :**
+```css
+/* Mobile first */
+.example-wrapper {
+    width: 95%;
+    padding: 10px;
+}
+
+/* Tablet */
+@media (min-width: 768px) {
+    .example-wrapper {
+        width: 80%;
+        padding: 20px;
+    }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+    .example-wrapper {
+        max-width: 800px;
+        padding: 30px;
+    }
+}
+```
+
+### **8.8 - Debugging CSS**
+
+#### **Vérifier le chargement des CSS :**
+```bash
+# Voir les assets générés
+ls -la public/assets/
+
+# Vérifier dans le navigateur (F12)
+# → Onglet Network → Voir si le CSS se charge
+# → Onglet Elements → Vérifier que les styles s'appliquent
+```
+
+#### **Problèmes courants :**
+```bash
+# CSS ne se charge pas
+→ Vérifier le chemin dans asset()
+→ Vérifier que le fichier existe
+→ Vider le cache : php bin/console cache:clear
+
+# Styles ne s'appliquent pas
+→ Vérifier la spécificité CSS
+→ Utiliser !important temporairement pour débugger
+→ Vérifier l'ordre d'inclusion des CSS
+```
+
+### **8.9 - Performance et optimisation**
+
+#### **Minification en production :**
+```bash
+# En production, Symfony peut minifier automatiquement
+# Voir config/packages/prod/framework.yaml
+```
+
+#### **Ordre de chargement optimal :**
+```twig
+<head>
+    <!-- 1. CSS externes (CDN) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+    
+    <!-- 2. CSS de base de l'application -->
+    <link rel="stylesheet" href="{{ asset('assets/css/global.css') }}">
+    
+    <!-- 3. CSS spécifiques aux pages -->
+    {% block stylesheets %}{% endblock %}
+    
+    <!-- 4. CSS inline critique -->
+    <style>
+        /* CSS critique pour éviter le FOUC */
+    </style>
+</head>
+```
+
+### **8.10 - Test de votre CSS**
+
+```bash
+# Vérifier que tout fonctionne
+# 1. Aller sur https://localhost
+# 2. Ouvrir les outils de développement (F12)
+# 3. Vérifier dans l'onglet Network que HomeControlleur.css se charge
+# 4. Vérifier dans l'onglet Elements que les styles s'appliquent
+# 5. Modifier le CSS et rafraîchir pour voir les changements
+```
+
+---
+
+
+## �� **Commandes utiles**
 
 ### **Gestion des conteneurs**
 ```bash
