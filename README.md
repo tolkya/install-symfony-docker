@@ -1196,3 +1196,9 @@ docker compose down -v
 docker volume prune
 docker compose up --wait
 ```
+
+psql -U app
+
+app=# GRANT ALL PRIVILEGES ON DATABASE app TO symfony_user;
+
+app=# GRANT ALL PRIVILEGES ON DATABASE app TO symfony_user;
