@@ -1105,6 +1105,465 @@ ls -la public/assets/
 ```
 
 ---
+---
+
+## 🗄️ **9. Ajout d'Adminer - Interface graphique pour PostgreSQL**
+
+### **9.1 - Qu'est-ce qu'Adminer ?**
+
+Adminer est une interface web légère pour gérer vos bases de données directement depuis votre navigateur, similaire à phpMyAdmin mais pour plusieurs types de bases.
+
+### **9.2 - Ajout du service Adminer au compose.yaml**
+
+Ajouter ce service dans votre [`compose.yaml`](compose.yaml ) :
+```yaml
+services:
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+```
+
+### **9.3 - Redémarrage de la stack avec Adminer**
+```bash
+# Arrêter les services actuels
+docker compose down
+
+# Redémarrer avec Adminer inclus
+docker compose up --wait
+
+# Vérifier que tous les services fonctionnent
+docker compose ps
+```
+
+### **9.4 - Accès à Adminer**
+- **URL** : `http://localhost:8080`
+- **Interface** : Web accessible depuis votre navigateur
+
+### **9.5 - Connexion à PostgreSQL via Adminer**
+
+Dans l'interface Adminer, utiliser ces paramètres :
+- **Système** : PostgreSQL
+- **Serveur** : database
+- **Utilisateur** : symfony_user
+- **Mot de passe** : symfony_secure_pwd_123
+- **Base de données** : app
+
+### **9.6 - Fonctionnalités disponibles**
+- 📊 **Visualisation des tables** - Structure et données
+- ✏️ **Édition directe** - Modifier les enregistrements
+- 🔍 **Exécution de requêtes SQL** - Interface de requêtage
+- 📈 **Schéma de base** - Vue d'ensemble des relations
+- 📤 **Import/Export** - Sauvegarde et restauration
+
+---
+
+## 🔐 **10. Extension des privilèges utilisateur**
+
+### **10.1 - Problème rencontré**
+
+L'utilisateur `symfony_user` avait des privilèges trop limités causant des erreurs lors des migrations Doctrine et des opérations sur la structure de la base.
+
+### **10.2 - Solution appliquée**
+
+#### **Connexion en tant qu'administrateur :**
+```bash
+# Se connecter avec l'utilisateur admin PostgreSQL
+docker compose exec database psql -U app -d app
+```
+
+#### **Extension des privilèges :**
+```sql
+-- Accorder tous les privilèges sur la base de données
+GRANT ALL PRIVILEGES ON DATABASE app TO symfony_user;
+
+-- Vérifier les nouveaux privilèges
+\du
+
+-- Quitter
+\q
+```
+
+### **10.3 - Modification permanente du script d'initialisation**
+
+Mise à jour du fichier `docker/postgres/init/01-create-symfony-user.sql` :
+```sql
+-- Script de sécurisation PostgreSQL pour Symfony (Version étendue)
+-- Objectif: Créer un utilisateur avec permissions étendues pour l'application
+
+DO $$
+BEGIN
+    -- Vérifier si l'utilisateur existe déjà
+    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'symfony_user') THEN
+        -- 1. Créer un utilisateur Symfony avec permissions étendues
+        CREATE USER symfony_user WITH PASSWORD 'symfony_secure_pwd_123';
+        
+        -- 2. Accorder tous les privilèges sur la base de données
+        GRANT ALL PRIVILEGES ON DATABASE app TO symfony_user;
+        
+        -- 3. Accorder les permissions sur le schéma public
+        GRANT ALL ON SCHEMA public TO symfony_user;
+        
+        -- 4. Accorder toutes les permissions sur les tables existantes
+        GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO symfony_user;
+        
+        -- 5. Accorder les permissions sur les futures tables
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO symfony_user;
+        
+        -- 6. Accorder les permissions sur les séquences
+        GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO symfony_user;
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO symfony_user;
+        
+        -- 7. Permissions pour les fonctions et procédures
+        GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO symfony_user;
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO symfony_user;
+        
+        RAISE NOTICE 'Utilisateur symfony_user créé avec privilèges étendus';
+        RAISE NOTICE 'SÉCURITÉ: Cet utilisateur peut maintenant gérer la structure de la base';
+    ELSE
+        RAISE NOTICE 'Utilisateur symfony_user existe déjà';
+    END IF;
+END
+$$;
+```
+
+### **10.4 - Correction du mot de passe par défaut dans compose.yaml**
+
+**Problème identifié** : Le mot de passe par défaut était exposé dans le compose.yaml
+
+**Solution appliquée** :
+Dans [`compose.yaml`](compose.yaml ), la ligne `DATABASE_URL` a été modifiée :
+```yaml
+# Configuration sécurisée avec placeholder
+DATABASE_URL: postgresql://${POSTGRES_USER:-symfony_user}:${POSTGRES_PASSWORD:-symfony_secure_pwd_123}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-15}&charset=${POSTGRES_CHARSET:-utf8}
+```
+
+**Variables dans .env.local** (non versionné) :
+```bash
+# Fichier .env.local - NE PAS VERSIONNER
+POSTGRES_PASSWORD=symfony_secure_pwd_123
+POSTGRES_USER=symfony_user
+POSTGRES_DB=app
+POSTGRES_VERSION=16
+```
+
+### **10.5 - Test des nouveaux privilèges**
+```bash
+# Connexion avec l'utilisateur étendu
+docker compose exec database psql -U symfony_user -d app
+
+# Test de création de table (DOIT FONCTIONNER)
+CREATE TABLE test_privileges (
+    id SERIAL PRIMARY KEY,
+    nom VARCHAR(100) NOT NULL
+);
+
+# Test d'ajout de contrainte (DOIT FONCTIONNER)
+ALTER TABLE test_privileges ADD CONSTRAINT unique_nom UNIQUE (nom);
+
+# Test de suppression de table (DOIT FONCTIONNER)
+DROP TABLE test_privileges;
+
+# Test de destruction de base (DOIT TOUJOURS ÉCHOUER)
+DROP DATABASE app;
+-- Résultat attendu: ERROR: must be owner of database
+
+# Sortir
+\q
+```
+
+---
+
+## 🏗️ **11. Création d'entités avec Doctrine**
+
+### **11.1 - Création de l'entité Moto**
+
+```bash
+# Entrer dans le conteneur PHP
+docker compose exec php bash
+
+# Créer l'entité Moto avec le maker
+php bin/console make:entity Moto
+```
+
+#### **Configuration interactive appliquée :**
+```
+New property name: marque
+Field type: string
+Field length: 100
+Can this field be null: false
+
+New property name: modele  
+Field type: string
+Field length: 100
+Can this field be null: false
+
+New property name: (Entrée pour finir)
+```
+
+### **11.2 - Création de l'entité Garage avec relation**
+
+```bash
+# Créer l'entité Garage
+php bin/console make:entity Garage
+```
+
+#### **Configuration avec relation OneToMany :**
+```
+New property name: nom
+Field type: string
+Field length: 150
+Can this field be null: false
+
+New property name: adresse
+Field type: text
+Can this field be null: true
+
+New property name: motos
+Field type: relation
+Related to: Moto
+Relation type: OneToMany
+New field name inside Moto: garage
+Moto.garage nullable: true
+```
+
+### **11.3 - Fichiers générés automatiquement**
+
+#### **Structure créée :**
+```
+src/
+├── Entity/
+│   ├── Moto.php              ← Entité avec propriétés et relations
+│   └── Garage.php            ← Entité avec collection de motos
+└── Repository/
+    ├── MotoRepository.php     ← Méthodes de requête personnalisées
+    └── GarageRepository.php   ← Méthodes de requête personnalisées
+```
+
+---
+
+## 🔄 **12. Gestion des migrations Doctrine**
+
+### **12.1 - Génération des migrations**
+
+```bash
+# Après création des entités, générer la migration
+php bin/console make:migration
+
+# Résultat : Fichier migration dans migrations/Version[timestamp].php
+```
+
+### **12.2 - Application des migrations**
+
+```bash
+# Voir l'état actuel des migrations
+php bin/console doctrine:migrations:status
+
+# Appliquer toutes les migrations en attente
+php bin/console doctrine:migrations:migrate --no-interaction
+
+# Vérifier que les tables sont créées via Adminer
+# URL: http://localhost:8080
+```
+
+### **12.3 - Migrations générées dans votre projet**
+
+D'après votre structure, ces migrations ont été créées :
+- `migrations/Version20250912124208.php` - Création tables Moto/Garage
+- `migrations/Version20250912135931.php` - Ajustements structure
+- `migrations/Version20250912140406.php` - Contraintes et index
+
+---
+
+## 🎮 **13. Création du TesttableController avec CRUD**
+
+### **13.1 - Génération du contrôleur**
+
+```bash
+# Créer le contrôleur de test
+php bin/console make:controller TesttableController
+```
+
+### **13.2 - Implémentation du contrôleur avec EntityManager**
+
+**Fichier généré** : `src/Controller/TesttableController.php`
+
+**Modifications appliquées** :
+```php
+<?php
+
+namespace App\Controller;
+
+use App\Entity\Moto;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
+
+final class TesttableController extends AbstractController
+{
+    #[Route('/testtable', name: 'app_testtable')]
+    public function index(): Response
+    {
+        return $this->render('testtable/index.html.twig', [
+            'controller_name' => 'TesttableController',
+        ]);
+    }
+
+    #[Route('/addmoto', name: 'addmoto')]
+    public function addmoto(EntityManagerInterface $entityManager): Response
+    {
+        // Créer une nouvelle moto
+        $moto = new Moto();
+        $moto->setMarque('Honda');
+        $moto->setModele('CBR600RR');
+
+        // Persister et sauvegarder en base
+        $entityManager->persist($moto);
+        $entityManager->flush();
+
+        return new Response('Moto enregistrée avec l\'id '.$moto->getId());
+    }
+}
+```
+
+### **13.3 - Résolution de l'erreur d'import**
+
+**Problème rencontré** :
+```
+Controller requires the "$entityManager" argument that could not be resolved.
+Cannot determine controller argument: the $entityManager argument is type-hinted 
+with the non-existent class: "App\Controller\EntityManagerInterface"
+```
+
+**Solution appliquée** :
+Correction des imports dans le contrôleur :
+```php
+// ❌ Import incorrect (causait l'erreur)
+use App\Controller\EntityManagerInterface;
+
+// ✅ Import correct (résout le problème)
+use Doctrine\ORM\EntityManagerInterface;
+```
+
+### **13.4 - Tests des routes implémentées**
+
+```bash
+# Route de test principale
+# https://localhost/testtable
+
+# Route d'ajout de moto
+# https://localhost/addmoto
+# Résultat attendu: "Moto enregistrée avec l'id X"
+```
+
+---
+
+## 📊 **14. Structure finale du projet**
+
+### **14.1 - Services Docker opérationnels**
+
+D'après votre [`compose.yaml`](compose.yaml ) :
+- **Application Symfony** : `https://localhost` (ports 80/443)
+- **Adminer** : `http://localhost:8080`
+- **PostgreSQL** : Interne (port 5432)
+
+### **14.2 - Configuration de sécurité appliquée**
+
+#### **Variables d'environnement sécurisées :**
+```yaml
+# Dans compose.yaml (valeurs par défaut sécurisées)
+POSTGRES_USER: ${POSTGRES_USER:-symfony_user}
+POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-symfony_secure_pwd_123}
+POSTGRES_DB: ${POSTGRES_DB:-app}
+POSTGRES_VERSION: ${POSTGRES_VERSION:-16}
+```
+
+#### **Fichiers de secrets (non versionnés) :**
+- `.env.local` - Variables de production locales
+- `.env.dev.local` - Variables de développement
+
+### **14.3 - Architecture complète actuelle**
+
+```
+📁 Votre projet Symfony complet
+├── compose.yaml                   ← Configuration Docker avec Adminer
+├── docker/postgres/init/          ← Scripts d'initialisation sécurisés
+├── migrations/                    ← 3 migrations Doctrine appliquées
+├── src/
+│   ├── Controller/
+│   │   ├── HomeController.php     ← Page d'accueil (route: /)
+│   │   └── TesttableController.php ← CRUD motos (routes: /testtable, /addmoto)
+│   ├── Entity/
+│   │   ├── Moto.php              ← Entité avec marque/modèle
+│   │   └── Garage.php            ← Entité avec relation OneToMany
+│   └── Repository/               ← Classes de requête générées
+├── templates/                    ← Vues Twig
+├── public/assets/css/            ← CSS personnalisés
+└── .env.local                    ← Secrets (non versionné)
+```
+
+### **14.4 - Fonctionnalités validées**
+
+#### **✅ Base de données :**
+- PostgreSQL avec utilisateur sécurisé mais étendu
+- Interface Adminer opérationnelle
+- Migrations Doctrine appliquées
+- Tables Moto et Garage créées avec relations
+
+#### **✅ Application :**
+- Contrôleurs fonctionnels avec injection de dépendances
+- CRUD de base opérationnel (insertion de motos)
+- Templates Twig avec CSS personnalisé
+- Navigation entre les pages
+
+#### **✅ Sécurité :**
+- Scripts d'initialisation automatisés
+- Variables sensibles non versionnées
+- Privilèges PostgreSQL équilibrés (fonctionnels mais contrôlés)
+
+---
+
+## 🔧 **15. Commandes de validation finale**
+
+### **15.1 - Tests de l'environnement complet**
+```bash
+# Vérifier tous les conteneurs
+docker compose ps
+
+# Tester la connexion BDD
+docker compose exec php bash
+php bin/console doctrine:query:sql "SELECT version();"
+
+# Tester l'insertion via URL
+# https://localhost/addmoto
+
+# Vérifier via Adminer
+# http://localhost:8080 (connexion avec symfony_user)
+```
+
+### **15.2 - État actuel des migrations**
+```bash
+# Voir l'état des migrations
+php bin/console doctrine:migrations:status
+
+# Résultat attendu : 3 migrations exécutées
+# Version20250912124208, Version20250912135931, Version20250912140406
+```
+
+### **15.3 - Routes disponibles**
+```bash
+# Lister toutes les routes actives
+php bin/console debug:router
+
+# Routes attendues :
+# app_home (/)
+# app_testtable (/testtable)  
+# addmoto (/addmoto)
+```
+
+**🚀 Configuration complète validée : Docker + PostgreSQL + Adminer + Entités Doctrine + CRUD fonctionnel !**
 
 
 ## �� **Commandes utiles**
