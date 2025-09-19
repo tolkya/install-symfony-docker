@@ -1661,3 +1661,9 @@ psql -U app
 app=# GRANT ALL PRIVILEGES ON DATABASE app TO symfony_user;
 
 app=# GRANT ALL PRIVILEGES ON DATABASE app TO symfony_user;
+
+
+Utiliser dbdiagram.io 
+db2dbml postgres 'postgresql://user_symfony:secret@database:5432/app' -o database1.dbml
+
+db2dbml postgres 'postgresql://user:password@localhost:5432/dbname?schemas=schema1,schema2,schema3' -o database.dbml
