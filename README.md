@@ -1662,7 +1662,18 @@ app=# GRANT ALL PRIVILEGES ON DATABASE app TO symfony_user;
 
 app=# GRANT ALL PRIVILEGES ON DATABASE app TO symfony_user;
 
-
+Dans le dockerfile
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    acl \
+    file \
+    gettext \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+# Installer Node.js et npm
+RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g @dbml/cli
 Utiliser dbdiagram.io 
 db2dbml postgres 'postgresql://user_symfony:secret@database:5432/app' -o database1.dbml
 
